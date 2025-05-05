@@ -5,7 +5,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, declarative_base
 
 Base = declarative_base()
 
-class User(Base):
+class TimestampMixin:
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class User(Base, TimestampMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -17,7 +22,7 @@ class User(Base):
     received_requests = relationship("FriendRequest", back_populates="recipient", foreign_keys="FriendRequest.recipient_id")
 
 
-class FriendRequest(Base):
+class FriendRequest(Base, TimestampMixin):
     __tablename__ = "friend_requests"
     __table_args__ = (
         UniqueConstraint("requester_id", "recipient_id"),
@@ -28,25 +33,23 @@ class FriendRequest(Base):
     requester_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     recipient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     status: Mapped[str] = mapped_column(default="pending")  # 'pending', 'accepted', 'rejected'
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     responded_at: Mapped[Optional[datetime]]
 
     requester = relationship("User", back_populates="sent_requests", foreign_keys=[requester_id])
     recipient = relationship("User", back_populates="received_requests", foreign_keys=[recipient_id])
 
 
-class Group(Base):
+class Group(Base, TimestampMixin):
     __tablename__ = "groups"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     created_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     members = relationship("GroupMember", back_populates="group")
 
 
-class GroupMember(Base):
+class GroupMember(Base, TimestampMixin):
     __tablename__ = "group_members"
     __table_args__ = (
         PrimaryKeyConstraint("group_id", "user_id"),
@@ -60,7 +63,7 @@ class GroupMember(Base):
     user = relationship("User")
 
 
-class Message(Base):
+class Message(Base, TimestampMixin):
     __tablename__ = "messages"
     __table_args__ = (
         CheckConstraint(
@@ -75,15 +78,13 @@ class Message(Base):
     recipient_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     recipient_group_id: Mapped[Optional[int]] = mapped_column(ForeignKey("groups.id", ondelete="CASCADE"))
     text: Mapped[Optional[str]]
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     sender = relationship("User", foreign_keys=[sender_id])
     recipient_user = relationship("User", foreign_keys=[recipient_user_id])
     attachments = relationship("MessageAttachment", back_populates="message")
 
 
-
-class MessageAttachment(Base):
+class MessageAttachment(Base, TimestampMixin):
     __tablename__ = "message_attachments"
 
     id: Mapped[int] = mapped_column(primary_key=True)

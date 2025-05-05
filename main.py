@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from custom_services.social_actions import social_actions_router
 from custom_services.auth import auth_router
 from custom_services.web_socket import web_socket_router
 import firebase_admin
@@ -28,3 +29,4 @@ app = FastAPI()
 
 app.include_router(auth_router)
 app.include_router(web_socket_router)
+app.include_router(social_actions_router)
