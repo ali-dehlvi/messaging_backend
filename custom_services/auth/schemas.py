@@ -15,3 +15,14 @@ class DeleteUserModel(BaseModel):
 class BaseResponseModel(BaseModel):
     success: bool = Field(description="True if API is runs without any error")
     message: Optional[str] = Field(description="Message related to API's success and failure")
+
+
+class BulkCreateUsersRequest(BaseModel):
+    users: list[CreateUserModel]
+
+class BulkDeleteUsersRequest(BaseModel):
+    users: list[CreateUserModel]
+
+
+class BulkBaseResponseModel(BaseModel):
+    result: list[BaseResponseModel]
