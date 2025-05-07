@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from custom_services.social_actions import social_actions_router
 from custom_services.auth import auth_router
 from custom_services.web_socket import web_socket_router
@@ -26,6 +27,14 @@ cred_obj = firebase_admin.credentials.Certificate(config)
 default_app = firebase_admin.initialize_app(credential=cred_obj)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost", "https://messaging-backend-6rbg.onrender.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 app.include_router(auth_router)
 app.include_router(web_socket_router)
