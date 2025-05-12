@@ -32,7 +32,7 @@ class FriendRequest(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     requester_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     recipient_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    status: Mapped[str] = mapped_column(default="pending")  # 'pending', 'accepted', 'rejected'
+    status: Mapped[str] = mapped_column(default="pending")  # 'pending', 'accepted', 'rejected', 'removed'
     responded_at: Mapped[Optional[datetime]]
 
     requester = relationship("User", back_populates="sent_requests", foreign_keys=[requester_id])

@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from custom_services.social_actions import social_actions_router
 from custom_services.auth import auth_router
 from custom_services.web_socket import web_socket_router
+from custom_services.friends import friends_router
+from custom_services.message import message_router
+from custom_services.admin import admin_router
 import firebase_admin
 from dotenv import load_dotenv
 import os
@@ -39,3 +42,6 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(web_socket_router)
 app.include_router(social_actions_router)
+app.include_router(friends_router)
+app.include_router(message_router)
+app.include_router(admin_router)

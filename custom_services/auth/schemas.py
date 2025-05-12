@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 
+from utils.models import BaseResponseModel
+
 class CreateUserModel(BaseModel):
     email: str = Field(description="Email of the user")
     password: str = Field(description="Password of the user")
@@ -10,11 +12,6 @@ class CreateUserModel(BaseModel):
 
 class DeleteUserModel(BaseModel):
     email: str = Field(description="Email to delete")
-
-
-class BaseResponseModel(BaseModel):
-    success: bool = Field(description="True if API is runs without any error")
-    message: Optional[str] = Field(description="Message related to API's success and failure")
 
 
 class BulkCreateUsersRequest(BaseModel):

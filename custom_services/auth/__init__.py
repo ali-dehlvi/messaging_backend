@@ -4,7 +4,7 @@ from firebase_admin import auth
 from google.cloud.firestore import DocumentReference
 
 from utils.psql.models import User
-from utils.user import create_user_util, delete_user_util
+from .utils import create_user_util, delete_user_util
 from .schemas import BaseResponseModel, BulkBaseResponseModel, BulkCreateUsersRequest, BulkDeleteUsersRequest, CreateUserModel, DeleteUserModel
 from utils.dependencies import firestore_dependency, psql_dependency
 
@@ -60,9 +60,3 @@ async def bulk_delete_users(
         except Exception as e:
             result.append(BaseResponseModel(success=False, message=f"{user_data.email}, {str(e)}"))
     return BulkBaseResponseModel(result=result)
-    
-
-@auth_router.get("/get_all_users")
-async def get_all_users(psql_db=psql_dependency):
-    users = psql_db.query(User).all()
-    return users

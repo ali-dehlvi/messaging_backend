@@ -2,16 +2,21 @@
 
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
-from utils.psql.models import User
+
+from custom_services.friends.schemas import FriendRequestStatus
+from utils.models import PaginatedRequestModel, PaginatedResponseModel
 
 
 class UserOut(BaseModel):
     email: str
     display_name: str
     phone: Optional[str]
+    friend_status: FriendRequestStatus | None
 
     model_config = ConfigDict(from_attributes=True)
 
-class SearchUsersResponse(BaseModel):
-    data: List[UserOut]
-    next_offset: int | None
+class SearchUsersRequest(PaginatedRequestModel):
+    q: str | None
+
+class SearchUsersResponse(PaginatedResponseModel[UserOut]):
+    pass
