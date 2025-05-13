@@ -8,7 +8,7 @@ from utils.functions import paginate_data
 
 social_actions_router = APIRouter(prefix="/social_actions", tags=["SocialActions"])
 
-@social_actions_router.get("/search_users", response_model=SearchUsersResponse)
+@social_actions_router.post("/search_users", response_model=SearchUsersResponse)
 async def search_users(request: SearchUsersRequest, user_data=user_verify_dependency, psql_db=psql_dependency):
     q = request.q or ""
     limit = request.limit
