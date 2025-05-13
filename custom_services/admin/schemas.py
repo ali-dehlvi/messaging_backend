@@ -3,6 +3,7 @@
 from pydantic import BaseModel
 
 from custom_services.friends.schemas import FriendRequestStatus
+from custom_services.social_actions.schemas import UserOut
 from utils.models import BaseResponseModel, PaginatedRequestModel, PaginatedResponseModel
 from utils.psql.models import User
 
@@ -35,6 +36,14 @@ class GetFriendsRequest(PaginatedRequestModel):
     email: str
 
 class GetFriendsResponse(PaginatedResponseModel[FriendRequestModel]):
+    pass
+
+
+class GetContextUsersRequest(PaginatedRequestModel):
+    q: str | None
+    context_email: str
+
+class GetContextUsersResponse(PaginatedResponseModel[UserOut]):
     pass
 
 

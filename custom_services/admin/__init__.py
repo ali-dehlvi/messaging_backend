@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import and_, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, aliased
 from firebase_admin import auth
 
+from custom_services.social_actions.schemas import UserOut
 from utils.functions import paginate_data
 
-from .schemas import FriendRequestModel, FriendRequestUser, GetAllUsersRequest, GetAllUsersResponse, GetFriendsRequest, GetFriendsResponse, GetLoginTokenRequest, GetLoginTokenResponse, GetMessagesRequest, GetMessagesResponse, MessageModel, MessageUser, SetFriendRequestRequest, SetFriendRequestResponse
+from .schemas import FriendRequestModel, FriendRequestUser, GetAllUsersRequest, GetAllUsersResponse, GetContextUsersRequest, GetContextUsersResponse, GetFriendsRequest, GetFriendsResponse, GetLoginTokenRequest, GetLoginTokenResponse, GetMessagesRequest, GetMessagesResponse, MessageModel, MessageUser, SetFriendRequestRequest, SetFriendRequestResponse
 from .utils import check_admin_user
 from utils.dependencies import user_verify_dependency, psql_dependency, firestore_dependency
 from utils.psql.models import FriendRequest, User, Message
@@ -94,6 +95,25 @@ async def get_friends(request: GetFriendsRequest, admin_user=user_verify_depende
         joinedload(FriendRequest.requester)
     )
 
+    if q:
+        ilike_pattern = f"%{q}%"
+        query = query.filter(
+            or_(
+                FriendRequest.recipient.has(
+                    or_(
+                        User.email.ilike(ilike_pattern),
+                        User.display_name.ilike(ilike_pattern),
+                    )
+                ),
+                FriendRequest.requester.has(
+                    or_(
+                        User.email.ilike(ilike_pattern),
+                        User.display_name.ilike(ilike_pattern),
+                    )
+                ),
+            )
+        )
+
     data, next_offset, total = paginate_data(query, limit, offset)
 
     return GetFriendsResponse(
@@ -114,6 +134,64 @@ async def get_friends(request: GetFriendsRequest, admin_user=user_verify_depende
         next_offset=next_offset,
         total=total
     )
+
+
+@admin_router.post("/search_context_users", response_model=GetContextUsersResponse)
+async def search_context_users(request: GetContextUsersRequest, admin_user=user_verify_dependency, psql_db=psql_dependency):
+    check_admin_user(admin_user["user"])
+
+    email = request.context_email
+    q = request.q
+    limit = request.limit
+    offset = request.offset
+
+    current_user: User = psql_db.query(User).filter(User.email == email).first()
+    if not current_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Aliased FriendRequest to allow outer join in both directions
+    FriendRequestAlias = aliased(FriendRequest)
+
+    # Join FriendRequest (in either direction) to get status if exists
+    users_query = (
+        psql_db.query(User, FriendRequestAlias.status.label("friend_status"))
+        .outerjoin(
+            FriendRequestAlias,
+            or_(
+                and_(
+                    FriendRequestAlias.requester_id == current_user.id,
+                    FriendRequestAlias.recipient_id == User.id,
+                ),
+                and_(
+                    FriendRequestAlias.recipient_id == current_user.id,
+                    FriendRequestAlias.requester_id == User.id,
+                ),
+            ),
+        )
+        .filter(User.id != current_user.id)
+    )
+
+    if q:
+        users_query = users_query.filter(
+            or_(
+                User.email.ilike(f"%{q}%"),
+                User.display_name.ilike(f"%{q}%"),
+            )
+        )
+
+    users_query = users_query.order_by(User.email.asc())
+
+    users_data, next_offset, total = paginate_data(users_query, limit, offset)
+
+    return GetContextUsersResponse(
+        data=[
+            UserOut(**user.__dict__, friend_status=friend_status)
+            for user, friend_status in users_data
+        ],
+        next_offset=next_offset,
+        total=total
+    )
+
 
 
 @admin_router.post("/set_friend_request" ,response_model=SetFriendRequestResponse)
