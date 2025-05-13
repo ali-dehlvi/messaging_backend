@@ -61,7 +61,10 @@ async def get_all_users(request: GetAllUsersRequest, user=user_verify_dependency
     next_offset = offset + limit if offset + limit < total else None
 
     return GetAllUsersResponse(
-        data=users,
+        data=[
+            UserOut(**user.__dict__)    
+            for user in users
+        ],
         next_offset=next_offset,
         total=total
     )

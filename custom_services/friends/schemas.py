@@ -34,7 +34,7 @@ class FriendRequestRemoveResponse(BaseResponseModel):
     pass
 
 
-class FriendsListRequest(BaseModel, PaginatedRequestModel):
+class FriendsListRequest(PaginatedRequestModel):
     status: List[FriendRequestStatus]
 
 class UserPreview(BaseModel):

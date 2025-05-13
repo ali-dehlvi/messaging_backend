@@ -18,7 +18,7 @@ class GetLoginTokenResponse(BaseModel):
 class GetAllUsersRequest(PaginatedRequestModel):
     q: str | None
 
-class GetAllUsersResponse(PaginatedResponseModel[User]):
+class GetAllUsersResponse(PaginatedResponseModel[UserOut]):
     pass
 
 
