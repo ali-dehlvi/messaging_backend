@@ -6,7 +6,7 @@ from firebase_admin import auth
 from custom_services.social_actions.schemas import UserOut
 from utils.functions import paginate_data
 
-from .schemas import FriendRequestModel, FriendRequestUser, GetAllUsersRequest, GetAllUsersResponse, GetContextUsersRequest, GetContextUsersResponse, GetFriendsRequest, GetFriendsResponse, GetLoginTokenRequest, GetLoginTokenResponse, GetMessagesRequest, GetMessagesResponse, MessageModel, MessageUser, SetFriendRequestRequest, SetFriendRequestResponse
+from .schemas import AdminUserModel, FriendRequestModel, FriendRequestUser, GetAllUsersRequest, GetAllUsersResponse, GetContextUsersRequest, GetContextUsersResponse, GetFriendsRequest, GetFriendsResponse, GetLoginTokenRequest, GetLoginTokenResponse, GetMessagesRequest, GetMessagesResponse, MessageModel, MessageUser, SetFriendRequestRequest, SetFriendRequestResponse
 from .utils import check_admin_user
 from utils.dependencies import user_verify_dependency, psql_dependency, firestore_dependency
 from utils.psql.models import FriendRequest, User, Message
@@ -36,6 +36,9 @@ async def get_login_token(request: GetLoginTokenRequest, admin_user=user_verify_
 
 @admin_router.post("/get_all_users", response_model=GetAllUsersResponse)
 async def get_all_users(request: GetAllUsersRequest, user=user_verify_dependency, psql_db=psql_dependency):
+    print("user ================================")
+    print(user)
+    print("=====================================")
     check_admin_user(user["email"])
 
     q = request.q
@@ -62,7 +65,7 @@ async def get_all_users(request: GetAllUsersRequest, user=user_verify_dependency
 
     return GetAllUsersResponse(
         data=[
-            UserOut(**user.__dict__)    
+            AdminUserModel(**user.__dict__)    
             for user in users
         ],
         next_offset=next_offset,

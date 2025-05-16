@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import List, Literal, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from utils.models import BaseResponseModel, PaginatedRequestModel, PaginatedResponseModel
 
@@ -21,7 +21,14 @@ class FriendRequestStatus(Enum):
 
 class FriendRequestAnswerRequest(BaseModel):
     email: str
-    status: Literal[FriendRequestStatus.ACCEPTED, FriendRequestStatus.REJECTED]
+    status: FriendRequestStatus
+
+    @field_validator("status")
+    @classmethod
+    def check_status(cls, v: FriendRequestStatus) -> FriendRequestStatus:
+        if v not in {FriendRequestStatus.ACCEPTED, FriendRequestStatus.REJECTED}:
+            raise ValueError("Status must be 'accepted' or 'rejected'")
+        return v
 
 class FriendRequestAnswerResponse(BaseResponseModel):
     pass
@@ -63,7 +70,7 @@ class FriendWithMessageOut(BaseModel):
     last_activity_time: datetime
 
 class FriendsWithMessageRequest(PaginatedRequestModel):
-    q: str | None
+    q: Optional[str | None]
     pass
 
 class FriendsWithMessageResponse(PaginatedResponseModel[FriendWithMessageOut]):

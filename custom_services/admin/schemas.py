@@ -1,5 +1,6 @@
 
 
+from typing import Optional
 from pydantic import BaseModel
 
 from custom_services.friends.schemas import FriendRequestStatus
@@ -15,10 +16,15 @@ class GetLoginTokenResponse(BaseModel):
     token: str
 
 
-class GetAllUsersRequest(PaginatedRequestModel):
-    q: str | None
+class AdminUserModel(BaseModel):
+    email: str
+    display_name: str
+    phone: Optional[str]
 
-class GetAllUsersResponse(PaginatedResponseModel[UserOut]):
+class GetAllUsersRequest(PaginatedRequestModel):
+    q: Optional[str | None]
+
+class GetAllUsersResponse(PaginatedResponseModel[AdminUserModel]):
     pass
 
 
@@ -32,7 +38,7 @@ class FriendRequestModel(BaseModel):
     status: FriendRequestStatus
 
 class GetFriendsRequest(PaginatedRequestModel):
-    q: str | None
+    q: Optional[str | None]
     email: str
 
 class GetFriendsResponse(PaginatedResponseModel[FriendRequestModel]):
@@ -40,7 +46,7 @@ class GetFriendsResponse(PaginatedResponseModel[FriendRequestModel]):
 
 
 class GetContextUsersRequest(PaginatedRequestModel):
-    q: str | None
+    q: Optional[str | None]
     context_email: str
 
 class GetContextUsersResponse(PaginatedResponseModel[UserOut]):

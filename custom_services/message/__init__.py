@@ -5,7 +5,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
 
 from utils.psql.models import User, Message
-from utils.web_socket import websocket_manager
+from utils.web_socket import WebSocketResponse, WebSocketTypes, websocket_manager
 from .schemas import MessageGetRequest, MessageGetResponse, MessageModel, Recipient, SendMessageRequest, SendMessageResponse, Sender
 from utils.dependencies import user_verify_dependency, psql_dependency
 
@@ -46,7 +46,7 @@ async def message_get(request: MessageGetRequest, user=user_verify_dependency, p
 
     total = base_query.count()
 
-    messages = base_query.order_by(Message.created_at.desc()) \
+    messages = base_query.order_by(Message.created_at.asc()) \
         .offset(offset).limit(limit).all()
 
     message_models = [
@@ -94,7 +94,21 @@ async def send_message(request: SendMessageRequest, psql_db=psql_dependency, use
     psql_db.commit()
     psql_db.refresh(message)
 
-    websocket_manager.send_message_to_user_id(recipient_id, message.__dict__)
+    message = psql_db.query(Message).where(
+        Message.id.__eq__(message.id)
+    ).options(
+        joinedload(Message.sender), 
+        joinedload(Message.recipient_user)
+    ).first()
+
+    message_model = MessageModel(
+            text=message.text,
+            sender=Sender(email=message.sender.email),
+            recipient=Recipient(email=message.recipient_user.email),
+        )
+
+    await websocket_manager.send_message(recipient_email, WebSocketResponse(type=WebSocketTypes.MESSAGE_RECEIVED.value, data=message_model.model_dump()))
+    await websocket_manager.send_message(sender_email, WebSocketResponse(type=WebSocketTypes.MESSAGE_SENT.value, data=message_model.model_dump()))
 
     return SendMessageResponse(
         success=True,

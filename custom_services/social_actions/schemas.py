@@ -16,7 +16,7 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class SearchUsersRequest(PaginatedRequestModel):
-    q: str | None
+    q: Optional[str | None]
 
 class SearchUsersResponse(PaginatedResponseModel[UserOut]):
     pass

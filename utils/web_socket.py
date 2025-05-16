@@ -1,14 +1,18 @@
 from enum import Enum
 from fastapi import WebSocket
-from firebase_admin import firestore
+from firebase_admin import firestore, auth
 from pydantic import BaseModel
 
 class WebSocketTypes(Enum):
+    FRIEND_REQUEST_REMOVED="FRIEND_REQUEST_REMOVED"
+    FRIEND_REQUEST_SENT="FRIEND_REQUEST_SENT"
     FRIEND_REQUEST_RECEIVED="FRIEND_REQUEST_RECEIVED"
     FRIEND_REQUEST_ANSWER="FRIEND_REQUEST_ANSWER"
+    MESSAGE_RECEIVED="MESSAGE_RECEIVED"
+    MESSAGE_SENT="MESSAGE_SENT"
 
 class WebSocketResponse(BaseModel):
-    type: WebSocketTypes
+    type: str
     data: dict
 
 class WebSocketManager:
@@ -28,21 +32,34 @@ class WebSocketManager:
         if email in self.email_to_id:
             return self.email_to_id[email]
         try:
-            client = firestore.client()
-            doc = client.collection("users").where(filter=("email", "==", email)).limit(1).get()[0].to_dict()
-            uid: str = doc["uid"]
+            user: auth.UserRecord = auth.get_user_by_email(email)
+            print("get id user ======================")
+            print(user)
+            print(user.uid)
+            print("==================================")
+            uid: str = user.uid
             self.email_to_id[email] = uid
             return uid
         except:
             return None
         
     async def send_message_to_user_id(self, user_id: str, data: WebSocketResponse):
+        print("connections ===========================")
+        print(self.connections)
+        print("=======================================")
         if user_id in self.connections:
             web_socket = self.connections[user_id]
-            await web_socket.send_json(data.model_dump())
+            print("user id ================")
+            print(user_id)
+            print(data.__dict__)
+            print("========================")
+            await web_socket.send_json(data.__dict__)
     
     async def send_message(self, user_email: str, data: WebSocketResponse):
         uid = self.get_id_from_email(user_email)
+        print("uid ==============================")
+        print(uid)
+        print("==================================")
         if uid:
             await self.send_message_to_user_id(uid, data)
         

@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 from utils.models import BaseResponseModel, PaginatedRequestModel, PaginatedResponseModel
@@ -15,7 +16,7 @@ class MessageModel(BaseModel):
 
 class MessageGetRequest(PaginatedRequestModel):
     email: str
-    q: str | None
+    q: Optional[str | None]
 
 class MessageGetResponse(PaginatedResponseModel[MessageModel]):
     pass

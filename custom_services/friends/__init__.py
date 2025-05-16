@@ -28,35 +28,54 @@ async def send_friend_request(request: SendFriendRequest, user=user_verify_depen
         return SendFriendRequestResponse(success=False, message="User is not available")
     
     # checking is friend request is already present or not
-    is_friend_request_present = psql_db.query(FriendRequest).where(
-        and_(
-            FriendRequest.recipient_id.__eq__(recipient_user.id),
-            FriendRequest.requester_id.__eq__(requester_user.id),
-            FriendRequest.status.__ne__(FriendRequestStatus.REJECTED)
+    is_friend_request_presents = psql_db.query(FriendRequest).where(
+        or_(
+            and_(
+                FriendRequest.recipient_id.__eq__(recipient_user.id),
+                FriendRequest.requester_id.__eq__(requester_user.id)
+            ),
+            and_(
+                FriendRequest.recipient_id.__eq__(requester_user.id),
+                FriendRequest.requester_id.__eq__(recipient_user.id)
+            )
         )
     ).all()
 
-    if len(is_friend_request_present) > 0:
-        return SendFriendRequestResponse(
-            success=True,
-            message="Request already sent"
-        )
+    is_friend_request_present = is_friend_request_presents[0]
 
     # adding new friend request
-    friend_request = FriendRequest(
+    friend_request = is_friend_request_present or FriendRequest(
         requester_id=requester_user.id,
-        recipient_id=requester_user.id,
-        status=FriendRequestStatus.PENDING
+        recipient_id=recipient_user.id,
+        status=FriendRequestStatus.PENDING.value
     )
+    friend_request.requester_id=requester_user.id
+    friend_request.recipient_id=recipient_user.id
+    friend_request.status = FriendRequestStatus.PENDING.value
     psql_db.add(friend_request)
+
+    # delete extra requests
+    if len(is_friend_request_presents) > 1:
+        for item in is_friend_request_presents[1:]:
+            psql_db.delete(item)
+
     psql_db.commit()
     psql_db.refresh(friend_request)
 
     # send websocket message
+    print("recipient email =========================")
+    print(recipient_email)
+    print("=========================================")
     await websocket_manager.send_message(recipient_email, WebSocketResponse(
-        type=WebSocketTypes.FRIEND_REQUEST_RECEIVED, 
+        type=WebSocketTypes.FRIEND_REQUEST_RECEIVED.value, 
         data={
             "message": f"Friend request received from {requester_email}"
+        }
+    ))
+    await websocket_manager.send_message(requester_email, WebSocketResponse(
+        type=WebSocketTypes.FRIEND_REQUEST_SENT.value,
+        data={
+            "message": f"Friend request sent to {recipient_email}"
         }
     ))
 
@@ -93,7 +112,7 @@ async def friend_request_answer(request: FriendRequestAnswerRequest, user=user_v
         )
     
     # Update status
-    friend_request.status = request.status
+    friend_request.status = request.status.value
     friend_request.responded_at = datetime.datetime.now(datetime.timezone.utc)
     psql_db.add(friend_request)
 
@@ -101,9 +120,15 @@ async def friend_request_answer(request: FriendRequestAnswerRequest, user=user_v
 
     # send websocket message
     await websocket_manager.send_message(requester_email, WebSocketResponse(
-        type=WebSocketTypes.FRIEND_REQUEST_ANSWER,
+        type=WebSocketTypes.FRIEND_REQUEST_ANSWER.value,
         data={
             "message": f"{recipient_email} has {request.status} the request"
+        }
+    ))
+    await websocket_manager.send_message(recipient_email, WebSocketResponse(
+        type=WebSocketTypes.FRIEND_REQUEST_ANSWER.value,
+        data={
+            "message": f"you have {request.status} the request from {requester_email}"
         }
     ))
 
@@ -138,9 +163,22 @@ async def friend_request_remove(request: FriendRequestRemoveRequest, user=user_v
 
     if len(friend_request) == 0:
         return FriendRequestRemoveResponse(success=False, message="No request found")
-    friend_request[0].status = FriendRequestStatus.REMOVED
+    friend_request[0].status = FriendRequestStatus.REMOVED.value
     psql_db.add(friend_request[0])
     psql_db.commit()
+
+    await websocket_manager.send_message(email1, WebSocketResponse(
+        type=WebSocketTypes.FRIEND_REQUEST_REMOVED,
+        data={
+            "message": f"Friend request with {email2} is removed"
+        }
+    ))
+    await websocket_manager.send_message(email2, WebSocketResponse(
+        type=WebSocketTypes.FRIEND_REQUEST_REMOVED,
+        data={
+            "message": f"Friend request with {email1} is removed"
+        }
+    ))
 
     return FriendRequestRemoveResponse(
         success=True,
@@ -151,10 +189,10 @@ async def friend_request_remove(request: FriendRequestRemoveRequest, user=user_v
 @friends_router.post("/list", response_model=FriendsListResponse)
 async def get_friend_requests(request: FriendsListRequest, user=user_verify_dependency, psql_db=psql_dependency):
     user_record = psql_db.query(User).where(User.email.__eq__(user["email"])).first()
-    
+    status = [item.value for item in request.status]
     friend_requests = psql_db.query(FriendRequest).where(
         and_(
-            FriendRequest.status.in_(request.status),
+            FriendRequest.status.in_(status),
             or_(
                 FriendRequest.recipient_id.__eq__(user_record.id),
                 FriendRequest.requester_id.__eq__(user_record.id)
@@ -192,7 +230,7 @@ async def get_friend_requests(request: FriendsListRequest, user=user_verify_depe
     )
 
 
-@friends_router.get("/friends_with_last_message", response_model=FriendsWithMessageResponse)
+@friends_router.post("/friends_with_last_message", response_model=FriendsWithMessageResponse)
 async def get_friends_with_last_message(request: FriendsWithMessageRequest, user_data=user_verify_dependency, psql_db=psql_dependency):
     current_user_id = psql_db.query(User.id).filter(User.email == user_data["email"]).scalar()
 
@@ -208,9 +246,9 @@ async def get_friends_with_last_message(request: FriendsWithMessageRequest, user
     message_time_subq = (
         psql_db.query(
             func.max(Message.updated_at).label("last_message_time"),
-            case([
+            case(
                 (Message.sender_id == current_user_id, Message.recipient_user_id)
-            ], else_=Message.sender_id).label("other_user_id")
+            , else_=Message.sender_id).label("other_user_id")
         )
         .filter(
             or_(
@@ -262,7 +300,7 @@ async def get_friends_with_last_message(request: FriendsWithMessageRequest, user
                 and_(latest_message_alias.recipient_user_id == current_user_id, latest_message_alias.sender_id == other_user.id),
             )
         )
-        .filter(friend_request.status == FriendRequestStatus.ACCEPTED)
+        .filter(friend_request.status == FriendRequestStatus.ACCEPTED.value)
     )
 
     # 🔍 Search filter (on email, display_name, message text)
