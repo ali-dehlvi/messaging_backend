@@ -36,9 +36,6 @@ async def get_login_token(request: GetLoginTokenRequest, admin_user=user_verify_
 
 @admin_router.post("/get_all_users", response_model=GetAllUsersResponse)
 async def get_all_users(request: GetAllUsersRequest, user=user_verify_dependency, psql_db=psql_dependency):
-    print("user ================================")
-    print(user)
-    print("=====================================")
     check_admin_user(user["email"])
 
     q = request.q

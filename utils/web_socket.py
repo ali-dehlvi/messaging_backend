@@ -33,10 +33,6 @@ class WebSocketManager:
             return self.email_to_id[email]
         try:
             user: auth.UserRecord = auth.get_user_by_email(email)
-            print("get id user ======================")
-            print(user)
-            print(user.uid)
-            print("==================================")
             uid: str = user.uid
             self.email_to_id[email] = uid
             return uid
@@ -44,22 +40,12 @@ class WebSocketManager:
             return None
         
     async def send_message_to_user_id(self, user_id: str, data: WebSocketResponse):
-        print("connections ===========================")
-        print(self.connections)
-        print("=======================================")
         if user_id in self.connections:
             web_socket = self.connections[user_id]
-            print("user id ================")
-            print(user_id)
-            print(data.__dict__)
-            print("========================")
             await web_socket.send_json(data.__dict__)
     
     async def send_message(self, user_email: str, data: WebSocketResponse):
         uid = self.get_id_from_email(user_email)
-        print("uid ==============================")
-        print(uid)
-        print("==================================")
         if uid:
             await self.send_message_to_user_id(uid, data)
         

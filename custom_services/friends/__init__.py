@@ -63,9 +63,6 @@ async def send_friend_request(request: SendFriendRequest, user=user_verify_depen
     psql_db.refresh(friend_request)
 
     # send websocket message
-    print("recipient email =========================")
-    print(recipient_email)
-    print("=========================================")
     await websocket_manager.send_message(recipient_email, WebSocketResponse(
         type=WebSocketTypes.FRIEND_REQUEST_RECEIVED.value, 
         data={
